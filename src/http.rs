@@ -63,6 +63,7 @@ pub(crate) async fn request(
     url: &str,
     body: Option<String>,
     headers: HeaderMap,
+    timeout: Duration,
 ) -> crate::Result<Response<Incoming>>
 {
     let uri: Uri = url.parse().unwrap();
@@ -118,7 +119,7 @@ pub(crate) async fn request(
 
     let response = runtime::timeout(
         sender.send_request(req),
-        Duration::from_secs(30)
+        timeout,
     ).await?.map_err(|e| Error::Client(format!("Client error: {:?}", e)))?;
 
     Ok(response)
@@ -245,7 +246,8 @@ impl HttpClient {
         let response = request(self.method,
                                &self.url,
                                self.body,
-                               self.headers).await?;
+                               self.headers,
+                               self.timeout).await?;
 
         match response.status().as_u16() {
             204 => serde_json::from_str("{}")
@@ -275,7 +277,8 @@ impl HttpClient {
             let response = request(self.method.clone(),
                                    &self.url,
                                    self.body.clone(),
-                                   self.headers.clone()).await?;
+                                   self.headers.clone(),
+                                   self.timeout.clone()).await?;
 
             return match response.status().as_u16() {
                 204 => serde_json::from_str("{}").map_err(|err| {

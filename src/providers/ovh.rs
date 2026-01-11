@@ -195,7 +195,7 @@ impl OvhProvider {
             None
         };
 
-        let response = crate::http::request(method, url, body, headers).await?;
+        let response = crate::http::request(method, url, body, headers, self.timeout).await?;
 
         Ok(response)
     }
