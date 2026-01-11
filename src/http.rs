@@ -116,10 +116,12 @@ pub(crate) async fn request(
         }
     });
 
-    let res = sender.send_request(req).await
-        .map_err(|e| Error::Client(format!("Client error: {:?}", e)))?;
+    let response = runtime::timeout(
+        sender.send_request(req),
+        Duration::from_secs(30)
+    ).await?.map_err(|e| Error::Client(format!("Client error: {:?}", e)))?;
 
-    Ok(res)
+    Ok(response)
 }
 
 

@@ -372,6 +372,7 @@ pub(crate) mod runtime {
     use std::{future::Future, time::Duration};
     use cfg_if::cfg_if;
 
+
     pub fn spawn<T: Send + 'static>(future: impl Future<Output = T> + Send + 'static) {
         cfg_if! {
             if #[cfg(feature = "smol")] {
@@ -397,6 +398,18 @@ pub(crate) mod runtime {
 
             } else if #[cfg(feature = "tokio")] {
                 tokio::time::sleep(duration)
+            }
+        }
+    }
+
+    pub async fn timeout<T: Send + 'static, >(future: impl Future<Output = T> + Send + 'static, duration: Duration) -> crate::Result<T> {
+        cfg_if! {
+            if #[cfg(feature = "smol")] {
+                use smol_timeout::TimeoutExt;
+                future.timeout(duration).await
+                    .ok_or(super::Error::Api("Operation timed out".to_string()))
+            } else if #[cfg(feature = "tokio")] {
+                tokio::time:timeout(duration, future).await
             }
         }
     }
