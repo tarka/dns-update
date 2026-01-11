@@ -5,7 +5,7 @@ on: [push]
 
 jobs:
 
-  test-runtime:
+  test-asyn-runtimes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
