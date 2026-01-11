@@ -39,7 +39,7 @@ smol = { version = "2.0.2", optional = true }
 smol-timeout = { version = "0.6.1", optional = true }
 
 [features]
-default = ["smol"]
+default = []
 smol = ["dep:smol", "dep:smol-hyper", "dep:futures-rustls", "dep:smol-timeout"]
 tokio = ["dep:tokio", "dep:hyper-util", "dep:tokio-rustls"]
 integration_tests = []

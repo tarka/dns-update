@@ -397,7 +397,7 @@ pub(crate) mod runtime {
                 smol::Timer::interval(duration).await;
 
             } else if #[cfg(feature = "tokio")] {
-                tokio::time::sleep(duration)
+                tokio::time::sleep(duration).await
             }
         }
     }
@@ -409,7 +409,8 @@ pub(crate) mod runtime {
                 future.timeout(duration).await
                     .ok_or(super::Error::Api("Operation timed out".to_string()))
             } else if #[cfg(feature = "tokio")] {
-                tokio::time:timeout(duration, future).await
+                tokio::time::timeout(duration, future).await
+                    .map_err(|e| super::Error::Api(format!("Operation timed out: {e}")))
             }
         }
     }
