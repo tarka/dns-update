@@ -1,0 +1,19 @@
+
+name: "Integration Tests"
+
+on: [push]
+
+jobs:
+
+  test-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run integration tests on Smol
+        run: cargo test --features smol,integration_tests  tests::desec_tests::tests::smol_test
+
+      - name: Run integration tests on Tokio
+        run: cargo test --features tokio,integration_tests  tests::desec_tests::tests::tokio_test
