@@ -9,7 +9,7 @@
  * except according to those terms.
 */
 
-use std::{fmt::Debug, future::Future, sync::Arc, time::Duration};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use async_lock::OnceCell;
 use cfg_if::cfg_if;
@@ -29,7 +29,7 @@ use rustls::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::Error;
+use crate::{runtime, Error};
 
 static ROOT_STORE: OnceCell<Arc<RootCertStore>> = OnceCell::new();
 
@@ -57,27 +57,10 @@ cfg_if! {
     }
 }
 
-fn spawn<T: Send + 'static>(future: impl Future<Output = T> + Send + 'static) {
-    cfg_if! {
-        if #[cfg(feature = "smol")] {
-            smol::spawn(future)
-                .detach();
 
-        } else if #[cfg(feature = "tokio")] {
-            tokio::spawn(future);
-        }
-    }
-
-    // NOTE: This also works, and could be a fallback for other runtimes?
-    //
-    // let _join = thread::spawn(|| {
-    //     pollster::block_on(future);
-    // });
-}
-
-async fn request(
+pub(crate) async fn request(
     method: Method,
-    url: &String,
+    url: &str,
     body: Option<String>,
     headers: HeaderMap,
 ) -> crate::Result<Response<Incoming>>
@@ -126,7 +109,7 @@ async fn request(
     let (mut sender, conn) = http1::handshake(HyperIo::new(tlsstream)).await
         .map_err(|e| Error::Client(format!("Client error: {:?}", e)))?;
 
-    spawn(async move {
+    crate::runtime::spawn(async move {
         if let Err(e) = conn.await {
             // FIXME: Logging?
             eprintln!("Connection failed: {:?}", e);
@@ -140,7 +123,7 @@ async fn request(
 }
 
 
-async fn text(response: Response<Incoming>) -> crate::Result<String>
+pub(crate) async fn text(response: Response<Incoming>) -> crate::Result<String>
 {
     response.body_reader().utf8().await
         .map_err(|err| {
@@ -305,7 +288,7 @@ impl HttpClient {
                 429 if attempts < max_retries => {
                     if let Some(retry_after) = response.headers().get("retry-after") {
                         if let Ok(seconds) = retry_after.to_str().unwrap_or("0").parse::<u64>() {
-                            tokio::time::sleep(Duration::from_secs(seconds)).await;
+                            runtime::sleep(Duration::from_secs(seconds)).await;
                             attempts += 1;
                             continue;
                         }

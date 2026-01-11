@@ -11,11 +11,7 @@ use core::fmt;
  * except according to those terms.
  */
 use std::{
-    borrow::Cow,
-    fmt::{Display, Formatter},
-    net::{Ipv4Addr, Ipv6Addr},
-    str::FromStr,
-    time::Duration,
+    borrow::Cow, fmt::{Display, Formatter}, net::{Ipv4Addr, Ipv6Addr}, str::FromStr, time::Duration
 };
 
 use hickory_client::proto::rr::dnssec::{KeyPair, Private};
@@ -369,5 +365,39 @@ impl Display for Error {
 impl Display for DnsRecordType {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+pub(crate) mod runtime {
+    use std::{future::Future, time::Duration};
+    use cfg_if::cfg_if;
+
+    pub fn spawn<T: Send + 'static>(future: impl Future<Output = T> + Send + 'static) {
+        cfg_if! {
+            if #[cfg(feature = "smol")] {
+                smol::spawn(future)
+                    .detach();
+
+            } else if #[cfg(feature = "tokio")] {
+                tokio::spawn(future);
+            }
+        }
+
+        // NOTE: This also works, and could be a fallback for other runtimes?
+        //
+        // let _join = thread::spawn(|| {
+        //     pollster::block_on(future);
+        // });
+    }
+
+    pub async fn sleep(duration: Duration) {
+        cfg_if! {
+            if #[cfg(feature = "smol")] {
+                smol::Timer::interval(duration).await;
+
+            } else if #[cfg(feature = "tokio")] {
+                tokio::time::sleep(duration)
+            }
+        }
     }
 }

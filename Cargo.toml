@@ -16,7 +16,6 @@ resolver = "2"
 hickory-client = { version = "0.24", features = ["dns-over-rustls", "dnssec-ring", "dns-over-https-rustls"], default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.116"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "http2"]}
 serde_urlencoded = "0.7.1"
 sha1 = "0.10"
 async-lock = "3.4.2"
@@ -40,7 +39,7 @@ smol = { version = "2.0.2", optional = true }
 
 
 [features]
-default = []
+default = ["smol"]
 smol = ["dep:smol", "dep:smol-hyper", "dep:futures-rustls"]
 tokio = ["dep:tokio", "dep:hyper-util", "dep:tokio-rustls"]
 integration_tests = []

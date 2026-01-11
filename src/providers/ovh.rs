@@ -10,7 +10,9 @@
  */
 
 use crate::{strip_origin_from_name, DnsRecord, Error, IntoFqdn};
-use reqwest::Method;
+use http::{header::InvalidHeaderValue, HeaderMap, HeaderValue, Method, Response};
+use http_body_reader::ResponseExt;
+use hyper::body::Incoming;
 use serde::Serialize;
 use sha1::{Digest, Sha1};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -158,39 +160,44 @@ impl OvhProvider {
         format!("$1${}", hex_string)
     }
 
+
+    fn auth_headers(&self, signature: String, timestamp: String) -> Result<HeaderMap, InvalidHeaderValue> {
+
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Ovh-Application", HeaderValue::from_str(&self.application_key)?);
+        headers.insert("X-Ovh-Consumer", HeaderValue::from_str(&self.consumer_key)?);
+        headers.insert("X-Ovh-Signature", HeaderValue::from_str(&signature)?);
+        headers.insert("X-Ovh-Timestamp", HeaderValue::from_str(&timestamp)?);
+        headers.insert("Content-Type", HeaderValue::from_str("application/json")?);
+
+        Ok(headers)
+    }
+
+
     async fn send_authenticated_request(
         &self,
         method: Method,
         url: &str,
         body: &str,
-    ) -> crate::Result<reqwest::Response> {
+    ) -> crate::Result<Response<Incoming>> {
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| Error::Client(format!("Failed to get timestamp: {}", e)))?
             .as_secs();
-
         let signature = self.generate_signature(method.as_str(), url, body, timestamp);
+        let headers = self.auth_headers(signature, timestamp.to_string())
+            .map_err(|e| Error::Client(format!("Failed to create headers: {e}")))?;
 
-        let client = reqwest::Client::builder()
-            .timeout(self.timeout)
-            .build()
-            .map_err(|e| Error::Client(format!("Failed to create HTTP client: {}", e)))?;
-        let mut request = client
-            .request(method, url)
-            .header("X-Ovh-Application", &self.application_key)
-            .header("X-Ovh-Consumer", &self.consumer_key)
-            .header("X-Ovh-Signature", signature)
-            .header("X-Ovh-Timestamp", timestamp.to_string())
-            .header("Content-Type", "application/json");
+        let body = if !body.is_empty() {
+            Some(body.to_string())
+        } else {
+            None
+        };
 
-        if !body.is_empty() {
-            request = request.body(body.to_string());
-        }
+        let response = crate::http::request(method, url, body, headers).await?;
 
-        request
-            .send()
-            .await
-            .map_err(|e| Error::Api(format!("Failed to send request: {}", e)))
+        Ok(response)
     }
 
     async fn get_zone_name(&self, origin: impl IntoFqdn<'_>) -> crate::Result<String> {
@@ -239,7 +246,7 @@ impl OvhProvider {
         }
 
         let record_ids: Vec<u64> = serde_json::from_slice(
-            response
+            response.body_reader()
                 .bytes()
                 .await
                 .map_err(|e| Error::Api(format!("Failed to fetch record list: {}", e)))?
@@ -286,10 +293,7 @@ impl OvhProvider {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = crate::http::text(response).await?;
             return Err(Error::Api(format!(
                 "Failed to create record: HTTP {} - {}",
                 status, error_text
@@ -342,10 +346,7 @@ impl OvhProvider {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = crate::http::text(response).await?;
             return Err(Error::Api(format!(
                 "Failed to update record: HTTP {} - {}",
                 status, error_text
@@ -387,10 +388,7 @@ impl OvhProvider {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = crate::http::text(response).await?;
             return Err(Error::Api(format!(
                 "Failed to delete record: HTTP {} - {}",
                 status, error_text

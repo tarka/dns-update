@@ -25,7 +25,7 @@ use hickory_client::rr::{DNSClass, Name, RData, Record, RecordType};
 use hickory_client::tcp::TcpClientConnection;
 use hickory_client::udp::UdpClientConnection;
 
-use crate::{DnsRecord, Error, IntoFqdn};
+use crate::{runtime, DnsRecord, Error, IntoFqdn};
 
 #[derive(Clone)]
 pub struct Rfc2136Provider {
@@ -90,13 +90,13 @@ impl Rfc2136Provider {
             DnsAddress::Udp(addr) => {
                 let conn = UdpClientConnection::new(*addr)?.new_stream(Some(self.signer.clone()));
                 let (client, bg) = AsyncClient::connect(conn).await?;
-                tokio::spawn(bg);
+                runtime::spawn(bg);
                 Ok(client)
             }
             DnsAddress::Tcp(addr) => {
                 let conn = TcpClientConnection::new(*addr)?.new_stream(Some(self.signer.clone()));
                 let (client, bg) = AsyncClient::connect(conn).await?;
-                tokio::spawn(bg);
+                runtime::spawn(bg);
                 Ok(client)
             }
         }
