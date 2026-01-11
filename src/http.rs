@@ -13,18 +13,14 @@ use std::{fmt::Debug, future::Future, sync::Arc, time::Duration};
 
 use async_lock::OnceCell;
 use cfg_if::cfg_if;
-use http::{request::Builder, HeaderMap, HeaderName, HeaderValue};
+use http::{request::Builder, HeaderMap, HeaderValue};
 use http_body_reader::ResponseExt;
 use hyper::{
     body::Incoming,
     client::conn::http1,
     header::{CONTENT_TYPE, HOST},
-    Method, Response, StatusCode, Uri,
+    Method, Response, Uri,
 };
-// use reqwest::{
-//     header::{HeaderMap, HeaderValue, CONTENT_TYPE},
-//     Method,
-// };
 use rustls::{
     crypto::aws_lc_rs,
     pki_types::ServerName,

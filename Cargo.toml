@@ -31,9 +31,11 @@ hyper = { version = "1.8.1", features = ["http1", "http2", "client"] }
 http = "1.4.0"
 http-body = "1.0.1"
 http-body-reader = "0.1.2"
+tokio-rustls = "0.26.4"
+hyper-util = "0.1.19"
 
 [features]
-default = ["smol"]
+default = []
 smol = []
 tokio = []
 integration_tests = []
