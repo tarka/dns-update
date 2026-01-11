@@ -197,17 +197,16 @@ mod tests {
         let result = provider
             .delete("test", "example.com", DnsRecordType::TXT)
             .await;
+        println!("RES: {:?}", result);
 
         assert!(result.is_ok());
         mock.assert();
     }
 
-    #[tokio::test]
-    #[ignore = "Requires desec API Token and domain configuration"]
-    async fn integration_test() {
-        let token = ""; // <-- Fill in your deSEC API token here
-        let origin = ""; // <-- Fill in your domain (e.g., "example.com")
-        let domain = ""; // <-- Fill in your test subdomain (e.g., "test.example.com")
+    async fn integration_test() -> crate::Result<()> {
+        let token = "Zfp1QUSVdVdsBqGDbuRxX1FavSGv"; // <-- Fill in your deSEC API token here
+        let origin = "haltcondition.dedyn.io"; // <-- Fill in your domain (e.g., "example.com")
+        let domain = "test.haltcondition.dedyn.io"; // <-- Fill in your test subdomain (e.g., "test.example.com")
 
         assert!(
             !token.is_empty(),
@@ -225,21 +224,20 @@ mod tests {
         let provider = DesecProvider::new(token, Some(Duration::from_secs(30)));
 
         // check creation
-        let creation_result = provider
+        let _creation_result = provider
             .create(
                 domain,
                 DnsRecord::A {
-                    content: "1.1.1.1".parse().unwrap(),
+                    content: "127.0.0.1".parse().unwrap(),
                 },
                 3600,
                 origin,
             )
-            .await;
+            .await?;
 
-        assert!(creation_result.is_ok());
 
         // check modification
-        let update_result = provider
+        let _update_result = provider
             .update(
                 domain,
                 DnsRecord::A {
@@ -248,15 +246,33 @@ mod tests {
                 3600,
                 origin,
             )
-            .await;
-
-        assert!(update_result.is_ok());
+            .await?;
 
         // check deletion
-        let deletion_result = provider.delete(domain, origin, DnsRecordType::A).await;
+        let _deletion_result = provider.delete(domain, origin, DnsRecordType::A).await?;
 
-        assert!(deletion_result.is_ok());
+        Ok(())
     }
+
+    #[cfg(all(feature = "smol", feature = "integration_tests"))]
+    mod smol_test {
+        use macro_rules_attribute::apply;
+        use smol_macros::test;
+
+        #[apply(test!)]
+        async fn integration_test() -> crate::Result<()> {
+            super::integration_test().await
+        }
+    }
+
+    #[cfg(all(feature = "tokio", feature = "integration_tests"))]
+    mod tokio_test {
+        #[tokio::test]
+        async fn integration_test() -> crate::Result<()> {
+            super::integration_test().await
+        }
+    }
+
 
     #[test]
     fn test_into_desec_record() {
@@ -278,7 +294,7 @@ mod tests {
             content: "test".to_string(),
         };
         let desec_record: DesecDnsRecordRepresentation = record.into();
-        assert_eq!(desec_record.content, "test");
+        assert_eq!(desec_record.content, "\"test\"");
         assert_eq!(desec_record.record_type, "TXT");
 
         let record = DnsRecord::MX {

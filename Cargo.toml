@@ -20,7 +20,29 @@ serde_json = "1.0.116"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "http2"]}
 serde_urlencoded = "0.7.1"
 sha1 = "0.10"
+async-lock = "3.4.2"
+cfg-if = "1.0.4"
+rustls = "0.23.36"
+webpki-roots = "1.0.5"
+futures-rustls = "0.26.0"
+smol-hyper = "0.1.1"
+smol = "2.0.2"
+hyper = { version = "1.8.1", features = ["http1", "http2", "client"] }
+http = "1.4.0"
+http-body = "1.0.1"
+http-body-reader = "0.1.2"
+
+[features]
+default = ["smol"]
+smol = []
+tokio = []
+integration_tests = []
+#smol = ["dep:smol", "dep:smol-hyper", "dep:futures-rustls"]
+#tokio = ["dep:tokio", "dep:hyper-util", "dep:tokio-rustls"]
+
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 mockito = "1.2"
+smol-macros = "0.1.1"
+macro_rules_attribute = "0.2.2"

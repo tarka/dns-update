@@ -44,6 +44,7 @@ pub enum Error {
     Unauthorized,
     NotFound,
     BadRequest,
+    Url(String),
 }
 
 /// A DNS record type.
@@ -360,6 +361,7 @@ impl Display for Error {
             Error::Unauthorized => write!(f, "Unauthorized"),
             Error::NotFound => write!(f, "Not found"),
             Error::BadRequest => write!(f, "Bad request"),
+            Error::Url(e) => write!(f, "Invalid Url: {}", e),
         }
     }
 }
